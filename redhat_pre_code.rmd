@@ -1,0 +1,23 @@
+---
+title: "redhat_pre_code"
+author: "miaojun"
+date: "August 31, 2016"
+output: html_document
+---
+
+```{r import set, echo=FALSE}
+setwd("~/Documents/Kaggle Project/redhat")
+red_train <- read.csv(file = '~/Documents/Kaggle Project/redhat/act_train.csv', header = TRUE, stringsAsFactors = FALSE)
+people <- read.csv(file = '~/Documents/Kaggle Project/redhat/people.csv', header = TRUE, stringsAsFactors = FALSE)
+str(red_train)
+```
+
+## Join two datasets together
+The common key will be the ppl_id
+```{r join two sets, echo=FALSE}
+total_train <- merge(red_train, people, by = "people_id")
+str(total_train)
+summary(total_train$char_1.x)
+
+```
+
