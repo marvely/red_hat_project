@@ -20,4 +20,122 @@ str(total_train)
 summary(total_train$char_1.x)
 
 ```
+## split the dataset
+Since type1 activity is different than the rest, can I split it out as a separate set and build a separate model for it?
+The rest activities will use one model.
+```{r split set, echo=FALSE}
+library(sqldf)
+sqldf("select count(*), activity_category from total_train group by activity_category")
+type1_train <- total_train[which(total_train$activity_category == 'type 1'), ]
+other_type_train <- total_train[which(total_train$activity_category != 'type 1'), ]
+
+rm(people)
+rm(red_train)
+rm(total_train)
+
+type1_train$date.x <- as.Date(type1_train$date.x)
+type1_train$date.y <- as.Date(type1_train$date.y)
+```
+Looking at the two sets, we can treat each as a separate project.
+
+# For type1 activity
+```{r type1, echo=FALSE}
+col_names_type1 <- c("char_1.x", "char_2.x", "char_3.x", "char_4.x", "char_5.x", "char_6.x", "char_7.x", "char_8.x", "char_9.x", "char_1.y", "char_2.y", "char_3.y", "char_4.y", "char_5.y", "char_6.y", "char_7.y", "char_8.y", "char_9.y", "char_10.y", "char_11", "char_12", "char_13", "char_14", "char_15", "char_16", "char_17", "char_18", "char_19", "char_20", "char_21", "char_22", "char_23", "char_24","char_25", "char_26", "char_27", "char_28", "char_29", "char_30", "char_31", "char_32", "char_33", "char_34", "char_35", "char_36", "char_37", "group_1", "outcome")
+
+type1_train[col_names_type1] <- lapply(type1_train[col_names_type1], as.factor)
+type1_train[c("date.x", "date.y")] <- lapply(type1_train[c("date.x", "date.y")], weekdays)
+type1_train[c("date.x", "date.y")] <- lapply(type1_train[c("date.x", "date.y")], as.factor)
+type1_train$char_10.x <- NULL
+type1_train$activity_category <- NULL
+
+sample_size_type1 <- floor(0.75*nrow(type1_train))
+
+set.seed(220)
+type1_train_ind <- sample(seq_len(nrow(type1_train)), size = sample_size_type1)
+
+type1_final_train <- type1_train[type1_train_ind, ]
+type1_final_val <- type1_train[-type1_train_ind, ]
+
+rm(type1_train)
+rm(type1_train_ind)
+rm(sample_size_type1)
+```
+# explore the train set.
+```{r explore type1, echo=FALSE}
+
+train_people_label <- type1_final_train$people_id
+type1_final_train$people_id <- NULL
+type1_final_train$activity_id <- NULL
+
+```
+Think of it as a churn model, people joined on one day, and did a lot of different activities, with different characteristics (behavior).
+The outcome could be churn... 
+# with most of the variables categorical, and the binomial outcome, which model should I use?
+looks like the naive bayses model could work
+the modifications we need:
+1. to change the date to weekdays?
+2. bin the numeric char_38.
+3. change the target to be factor
+```{r fit model, echo=FALSE}
+table(type1_final_train$outcome)
+
+library(C50)
+type1_model_c50 <- C5.0(type1_final_train[-11], type1_final_train$outcome)
+
+summary(type1_model_c50)
+```
+Looking at the confusion metrix, seems like the decision tree model performed good.
+
+Maybe try other ways to improve the model performance?
+
+# Improve Model Performance
+```{r boosting decision tree, echo=FALSE}
+
+type1_model_c50_b10 <- C5.0(type1_final_train[-11], type1_final_train$outcome, trials = 10)
+summary(type1_model_c50_b10) #details of the model
+type1_model_c50_b10 # outline of the model
+```
+After changed trails to 5, expected to see the error rate will drop less than 3% --> it did, dropped to 1.9%.
+After 10 trials error rate even dropped to 1.4%....
+I think its probably good enough for me.
+
+# Validate the model using validation set.
+```{r validation, echo=FALSE}
+
+actual_type1_b10 <- type1_final_val$outcome
+type1_final_val$outcome <- NULL
+pred_type1_b10 <- predict(type1_model_c50_b10, type1_final_val)
+
+library(gmodels)
+CrossTable(actual_type1_b10, pred_type1_b10, prop.chisq = FALSE, prop.c = FALSE, prop.r = FALSE, dnn = c("actual outcome", "predicted outcome"))
+```
+The final error rate for the validation set is 0.053...
+
+If i want to use ROC curve to see the performance, how to transform the prediction result to the proper format for ROCR???
+Need it be probabilities.
+```{r ROCR, echo=FALSE}
+
+
+```
+
+
+# For type 2 to 7
+```{r type 2 to 7, echo=FALSE}
+drops <- c('char_1.x', 'char_2.x', 'char_3.x', 'char_4.x', 'char_5.x', 'char_6.x', 'char_7.x', 'char_8.x', 'char_9.x')
+other_type_train <- other_type_train[, !(colnames(other_type_train) %in% drops)]
+
+rm(drops)
+
+sample_size_other <- floor(0.75*nrow(other_type_train))
+
+set.seed(220)
+other_train_ind <- sample(seq_len(nrow(other_type_train)), size = sample_size_other)
+
+other_final_train <- other_type_train[other_train_ind, ]
+other_final_val <- other_type_train[-other_train_ind, ]
+
+rm(other_type_train)
+rm(other_train_ind)
+rm(sample_size_other)
+```
 
