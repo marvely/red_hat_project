@@ -113,7 +113,11 @@ The final error rate for the validation set is 0.053...
 
 If i want to use ROC curve to see the performance, how to transform the prediction result to the proper format for ROCR???
 Need it be probabilities.
+construct a dataset with actual, pred and pred_prob together.
 ```{r ROCR, echo=FALSE}
+
+pred_prob_b10 <- predict(type1_model_c50_b10, type1_final_val, type = "prob")
+final_set_for_evaluation <- cbind(actual_type1_b10, pred_type1_b10, pred_prob_b10)
 
 
 ```
