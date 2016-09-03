@@ -114,12 +114,38 @@ The final error rate for the validation set is 0.053...
 If i want to use ROC curve to see the performance, how to transform the prediction result to the proper format for ROCR???
 Need it be probabilities.
 construct a dataset with actual, pred and pred_prob together.
-```{r ROCR, echo=FALSE}
+```{r different measures of performance, echo=FALSE}
 
 pred_prob_b10 <- predict(type1_model_c50_b10, type1_final_val, type = "prob")
-final_set_for_evaluation <- cbind(actual_type1_b10, pred_type1_b10, pred_prob_b10)
+colnames(pred_prob_b10) <- c("pred_0_outcome", "pred_1_outcome")
+pred_prob_b10_1_outcome <- as.vector(pred_prob_b10[,2])
+#
+final_set_for_evaluation <- as.data.frame(cbind(actual_type1_b10, pred_type1_b10, pred_prob_b10_1_outcome))
 colnames(final_set_for_evaluation) <- c("actual_outcome", "predicted_outcome", "prediction_probability")
+final_set_for_evaluation[c("actual_outcome", "predicted_outcome")] <- lapply(final_set_for_evaluation[c("actual_outcome", "predicted_outcome")], as.factor)
+library(caret)
+confusionMatrix(final_set_for_evaluation$actual_outcome, final_set_for_evaluation$predicted_outcome, positive = "2")
+```
+Looking at the Kappa Statistics, it seems like the model shows very good agreement.
+# Sensitivity and Specificity
+```{r sense and spec, echo=FALSE}
+sensitivity(final_set_for_evaluation$actual_outcome, final_set_for_evaluation$predicted_outcome, positive = "2") # use positive
+specificity(final_set_for_evaluation$actual_outcome, final_set_for_evaluation$predicted_outcome, negative = "1") # use negative
 
+```
+
+# ROCR
+```{r rocr, echo=FALSE}
+library(ROCR)
+rocr_pred <- prediction(predictions = final_set_for_evaluation$prediction_probability, labels = final_set_for_evaluation$actual_outcome)
+rocr_perf <- performance(rocr_pred, measure = "tpr", x.measure = "fpr") 
+plot(rocr_perf, main = "ROC curve for C5.0 Boosted model for type1", color = "blue", lwd = 3)
+abline(a = 0, b = 1, lwd = 2, lty = 2)
+```
+then we can quantify the AUC for the ROC curve
+```{r auc, echo=FALSE}
+rocr_perf_auc <- performance(rocr_pred, measure = "auc") # y.values is what we need
+unlist(rocr_perf_auc@y.values)
 ```
 
 
