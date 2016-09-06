@@ -24,8 +24,6 @@ summary(total_train$char_1.x)
 Since type1 activity is different than the rest, can I split it out as a separate set and build a separate model for it?
 The rest activities will use one model.
 ```{r split set, echo=FALSE}
-library(sqldf)
-sqldf("select count(*), activity_category from total_train group by activity_category")
 type1_train <- total_train[which(total_train$activity_category == 'type 1'), ]
 other_type_train <- total_train[which(total_train$activity_category != 'type 1'), ]
 
@@ -33,8 +31,6 @@ rm(people)
 rm(red_train)
 rm(total_train)
 
-type1_train$date.x <- as.Date(type1_train$date.x)
-type1_train$date.y <- as.Date(type1_train$date.y)
 ```
 Looking at the two sets, we can treat each as a separate project.
 
@@ -43,6 +39,7 @@ Looking at the two sets, we can treat each as a separate project.
 col_names_type1 <- c("char_1.x", "char_2.x", "char_3.x", "char_4.x", "char_5.x", "char_6.x", "char_7.x", "char_8.x", "char_9.x", "char_1.y", "char_2.y", "char_3.y", "char_4.y", "char_5.y", "char_6.y", "char_7.y", "char_8.y", "char_9.y", "char_10.y", "char_11", "char_12", "char_13", "char_14", "char_15", "char_16", "char_17", "char_18", "char_19", "char_20", "char_21", "char_22", "char_23", "char_24","char_25", "char_26", "char_27", "char_28", "char_29", "char_30", "char_31", "char_32", "char_33", "char_34", "char_35", "char_36", "char_37", "group_1", "outcome")
 
 type1_train[col_names_type1] <- lapply(type1_train[col_names_type1], as.factor)
+type1_train[c("date.x", "date.y")] <- lapply(type1_train[c("date.x", "date.y")], as.Date)
 type1_train[c("date.x", "date.y")] <- lapply(type1_train[c("date.x", "date.y")], weekdays)
 type1_train[c("date.x", "date.y")] <- lapply(type1_train[c("date.x", "date.y")], as.factor)
 type1_train$char_10.x <- NULL
@@ -145,7 +142,7 @@ abline(a = 0, b = 1, lwd = 2, lty = 2)
 then we can quantify the AUC for the ROC curve
 ```{r auc, echo=FALSE}
 rocr_perf_auc <- performance(rocr_pred, measure = "auc") # y.values is what we need
-unlist(rocr_perf_auc@y.values)
+unlist(rocr_perf_auc@y.values) # and this is the auc value.
 ```
 
 
@@ -153,6 +150,12 @@ unlist(rocr_perf_auc@y.values)
 ```{r type 2 to 7, echo=FALSE}
 drops <- c('char_1.x', 'char_2.x', 'char_3.x', 'char_4.x', 'char_5.x', 'char_6.x', 'char_7.x', 'char_8.x', 'char_9.x')
 other_type_train <- other_type_train[, !(colnames(other_type_train) %in% drops)]
+col_names_other <- c("char_10.x",  "char_1.y", "char_2.y", "char_3.y", "char_4.y", "char_5.y", "char_6.y", "char_7.y", "char_8.y", "char_9.y", "char_10.y", "char_11", "char_12", "char_13", "char_14", "char_15", "char_16", "char_17", "char_18", "char_19", "char_20", "char_21", "char_22", "char_23", "char_24","char_25", "char_26", "char_27", "char_28", "char_29", "char_30", "char_31", "char_32", "char_33", "char_34", "char_35", "char_36", "char_37", "group_1", "outcome", "activity_category")
+
+other_type_train[col_names_other] <- lapply(other_type_train[col_names_other], as.factor)
+other_type_train[c("date.x", "date.y")] <- lapply(other_type_train[c("date.x", "date.y")], as.Date)
+other_type_train[c("date.x", "date.y")] <- lapply(other_type_train[c("date.x", "date.y")], weekdays)
+other_type_train[c("date.x", "date.y")] <- lapply(other_type_train[c("date.x", "date.y")], as.factor)
 
 rm(drops)
 
@@ -167,5 +170,15 @@ other_final_val <- other_type_train[-other_train_ind, ]
 rm(other_type_train)
 rm(other_train_ind)
 rm(sample_size_other)
+```
+# train the same model on this set
+```{r train C5.0 model, echo=FALSE}
+other_train_people_label <- other_final_train$people_id
+other_final_train$people_id <- NULL
+other_final_train$activity_id <- NULL
+
+table(other_final_train$outcome)
+other_model_b10 <- C5.0(other_final_train[-4], other_final_train$outcome, trials = 10)
+
 ```
 
