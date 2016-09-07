@@ -200,6 +200,15 @@ other_final_set_for_evaluation[c("actual_outcome", "predicted_outcome")] <- lapp
 
 library(caret)
 confusionMatrix(other_final_set_for_evaluation$actual_outcome, other_final_set_for_evaluation$predicted_outcome, positive = "2")
+
+library(ROCR)
+rocr_pred_other <- prediction(predictions = other_final_set_for_evaluation$prediction_probability, labels = other_final_set_for_evaluation$actual_outcome)
+rocr_perf_other<- performance(rocr_pred_other, measure = "tpr", x.measure = "fpr") 
+plot(rocr_perf_other, main = "ROC curve for C5.0 Boosted model for other types", color = "blue", lwd = 3)
+abline(a = 0, b = 1, lwd = 2, lty = 2)
+
+rocr_perf_other_auc <- performance(rocr_pred_other, measure = "auc") # y.values is what we need
+unlist(rocr_perf_other_auc@y.values) # and this is the auc value.
 ```
 
 
