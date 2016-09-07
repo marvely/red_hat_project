@@ -30,7 +30,6 @@ other_type_train <- total_train[which(total_train$activity_category != 'type 1')
 rm(people)
 rm(red_train)
 rm(total_train)
-
 ```
 Looking at the two sets, we can treat each as a separate project.
 
@@ -158,6 +157,7 @@ other_type_train[c("date.x", "date.y")] <- lapply(other_type_train[c("date.x", "
 other_type_train[c("date.x", "date.y")] <- lapply(other_type_train[c("date.x", "date.y")], as.factor)
 
 rm(drops)
+rm(col_names_other)
 
 sample_size_other <- floor(0.75*nrow(other_type_train))
 
@@ -178,7 +178,28 @@ other_final_train$people_id <- NULL
 other_final_train$activity_id <- NULL
 
 table(other_final_train$outcome)
+library(C50)
 other_model_b10 <- C5.0(other_final_train[-4], other_final_train$outcome, trials = 10)
-
+summary(other_model_b10)
 ```
+# Validation step for other type model
+```{r validation, echo=FALSE}
+actual_other_outcome <- other_final_val$outcome
+other_final_val$outcome <- NULL
+pred_other_b10 <- predict(other_model_b10, other_final_val)
+
+library(gmodels)
+CrossTable(actual_other_outcome, pred_other_b10, prop.chisq = FALSE, prop.c = FALSE, prop.r = FALSE, dnn = c("actual outcome", "predicted outcome"))
+pred_prob_other_b10 <- predict(other_model_b10, other_final_val, type = "prob")
+pred_prob_other_b10_1_outcome <- as.vector(pred_prob_other_b10[, 2])
+
+other_final_set_for_evaluation <- as.data.frame(cbind(actual_other_outcome, pred_other_b10, pred_prob_other_b10_1_outcome))
+
+colnames(other_final_set_for_evaluation) <- c("actual_outcome", "predicted_outcome", "prediction_probability")
+other_final_set_for_evaluation[c("actual_outcome", "predicted_outcome")] <- lapply(other_final_set_for_evaluation[c("actual_outcome", "predicted_outcome")], as.factor)
+
+library(caret)
+confusionMatrix(other_final_set_for_evaluation$actual_outcome, other_final_set_for_evaluation$predicted_outcome, positive = "2")
+```
+
 
