@@ -27,7 +27,7 @@ The rest activities will use one model.
 type1_train <- total_train[which(total_train$activity_category == 'type 1'), ]
 other_type_train <- total_train[which(total_train$activity_category != 'type 1'), ]
 
-rm(people)
+#rm(people) will use it again later to join the test set... so do not remove here
 rm(red_train)
 rm(total_train)
 ```
@@ -149,14 +149,13 @@ unlist(rocr_perf_auc@y.values) # and this is the auc value.
 ```{r type 2 to 7, echo=FALSE}
 drops <- c('char_1.x', 'char_2.x', 'char_3.x', 'char_4.x', 'char_5.x', 'char_6.x', 'char_7.x', 'char_8.x', 'char_9.x')
 other_type_train <- other_type_train[, !(colnames(other_type_train) %in% drops)]
-col_names_other <- c("char_10.x",  "char_1.y", "char_2.y", "char_3.y", "char_4.y", "char_5.y", "char_6.y", "char_7.y", "char_8.y", "char_9.y", "char_10.y", "char_11", "char_12", "char_13", "char_14", "char_15", "char_16", "char_17", "char_18", "char_19", "char_20", "char_21", "char_22", "char_23", "char_24","char_25", "char_26", "char_27", "char_28", "char_29", "char_30", "char_31", "char_32", "char_33", "char_34", "char_35", "char_36", "char_37", "group_1", "outcome", "activity_category")
 
-other_type_train[col_names_other] <- lapply(other_type_train[col_names_other], as.factor)
 other_type_train[c("date.x", "date.y")] <- lapply(other_type_train[c("date.x", "date.y")], as.Date)
 other_type_train[c("date.x", "date.y")] <- lapply(other_type_train[c("date.x", "date.y")], weekdays)
-other_type_train[c("date.x", "date.y")] <- lapply(other_type_train[c("date.x", "date.y")], as.factor)
+col_names_other <- c( "outcome", "date.x", "date.y")
 
-rm(drops)
+other_type_train[col_names_other] <- lapply(other_type_train[col_names_other], as.factor)
+
 rm(col_names_other)
 
 sample_size_other <- floor(0.75*nrow(other_type_train))
@@ -211,4 +210,41 @@ rocr_perf_other_auc <- performance(rocr_pred_other, measure = "auc") # y.values 
 unlist(rocr_perf_other_auc@y.values) # and this is the auc value.
 ```
 
+# Part 3
+Since we got the individual models for type1 and other types, we can apply it to the test set.
+```{r split test set, echo=FALSE}
+test <- read.csv(file = "~/Documents/Kaggle Project/redhat/act_test.csv", header = TRUE, stringsAsFactors = FALSE)
+# merge with people table again? possibly
+test_join <- merge(test, people, by = "people_id")
+
+test_type1 <- test_join[which(test_join$activity_category == "type 1"), ]
+test_other <- test_join[which(test_join$activity_category != "type 1"), ]
+
+rm(test)
+rm(test_join)
+
+```
+
+## for type1 in test set
+```{r test type1, echo=FALSE}
+
+```
+
+## for other types in test set
+```{r test other types, echo=FALSE}
+test_other <- test_other[, !(colnames(test_other) %in% drops)]
+test_other[c("date.x", "date.y")] <- lapply(test_other[c("date.x", "date.y")], as.Date)
+test_other[c("date.x", "date.y")] <- lapply(test_other[c("date.x", "date.y")], weekdays)
+col_names_other <- c("date.x", "date.y")
+test_other[col_names_other] <- lapply(test_other[col_names_other], as.factor)
+
+```
+# Fit data on test set
+```{r fit model on test set, echo=FALSE}
+test_other_label <- test_other$people_id
+test_other$people_id <- NULL
+test_other$activity_id <- NULL
+
+pred_test_other_b10 <- predict(other_model_b10, test_other)
+```
 
